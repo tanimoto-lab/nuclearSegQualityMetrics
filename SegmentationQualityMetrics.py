@@ -77,9 +77,10 @@ def segQualMetrics(testLabelImageFile: str,
 
     accuracy = nTruePostive / (nTruePostive + nFalseNegative + nFalsePositive)
 
-    cellCount = nTest
+    testCellCounts = nTest
+    gtCellCount = nGT
 
-    return cellCount, recall, precision, fMeasure, accuracy
+    return gtCellCount, testCellCounts, recall, precision, fMeasure, accuracy
 
 def saveResultsTestList(testLabelImageFiles: typing.Iterable[str],
                         groundTruthLabelImagFile: str, outputDir: str,
@@ -92,32 +93,42 @@ def saveResultsTestList(testLabelImageFiles: typing.Iterable[str],
 
     for label, testLabelImageFile in zip(labels, testLabelImageFiles):
 
-        cellCount, recall, precision, fMeasure, accuracy = \
+        gtCellCount, testCellCounts, recall, precision, fMeasure, accuracy = \
             segQualMetrics(testLabelImageFile, groundTruthLabelImagFile)
         tempDict = {'Recall': recall, 'Precision': precision, 'fMeasure': fMeasure, 'Accuracy': accuracy,
                     'testLabelImageFile': testLabelImageFile,
                     'groundTruthLabelImageFile': groundTruthLabelImagFile,
-                    'label': label, 'cellCount': cellCount}
+                    'label': label, 'testCellCount': testCellCounts, 'groundTruthCellCount': gtCellCount}
         resDF = resDF.append(tempDict, ignore_index=True)
 
-    fig, ax = plt.subplots(figsize=(14, 11.2))
+    fig0, ax0 = plt.subplots(figsize=(14, 11.2))
 
     tempDF = resDF.set_index(keys=['label'])
     tempDF = tempDF.sort_index()
-    tempDF.plot(ax=ax, xticks=range(nTest),
+    tempDF.plot(ax=ax0, xticks=range(nTest), y=['Recall', 'Precision', 'fMeasure', 'Accuracy'],
                 marker='o', ms=10, lw=3, )
 
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
+    ax0.set_xticklabels(ax0.get_xticklabels(), rotation=90)
 
-    ax.set_xlim(-0.5, nTest - 0.5)
-    fig.tight_layout()
-    fig.canvas.draw()
-    fig.savefig(os.path.join(outputDir, 'metrics.png'), dpi=150)
+    ax0.set_xlim(-0.5, nTest - 0.5)
+    fig0.tight_layout()
+    fig0.canvas.draw()
+    fig0.savefig(os.path.join(outputDir, 'metrics.png'), dpi=150)
+
+    fig1, ax1 = plt.subplots(figsize=(14, 11.2))
+    tempDF.plot(ax=ax1, xticks=range(nTest), y=['testCellCount'], marker='o', ms=10, lw=3, color='b')
+    ax1.plot(ax1.get_xlim(), [gtCellCount, gtCellCount], 'r:', lw=3, label='ground Truth')
+    ax1.legend(loc='best')
+    ax1.set_xlim(-0.5, nTest - 0.5)
+    fig1.tight_layout()
+    fig1.canvas.draw()
+    fig1.savefig(os.path.join(outputDir, 'cellCounts.png'), dpi=150)
 
     tempDF.to_excel(os.path.join(outputDir, 'metrics.xlsx'))
 
-    plt.close(fig.number)
-    del fig
+    for fig in [fig0, fig1]:
+        plt.close(fig.number)
+        del fig
     return resDF
 
 if __name__ == '__main__':
