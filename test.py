@@ -5,21 +5,18 @@
 # plotCellCounts(opDir)
 
 from SegmentationQualityMetrics import saveResultsTestList
+import os
 
-gtLabelImageFile = \
-    'C:/Users/Ajayrama/Documents/Takahiro/countingResults/' \
-    'test1_8bit_CLAHE3D64053/test1_8bit_CLAHE3D64053.tif'
+homeFolder = 'C:/Users/Ajayrama/Documents/Takahiro'
+
+gtLabelImageFile = os.path.join(homeFolder, 'metricsTest', 'verysmall.labels(255).tif')
+
 
 testLabelImageFiles = [
-    'C:/Users/Ajayrama/Documents/Takahiro/countingResults/test1_8bit/test1_8bit.tif',
-    'C:/Users/Ajayrama/Documents/Takahiro/countingResults/test1_8bit_CLAHE3D64053/test1_8bit_CLAHE3D64053.tif',
-    'C:/Users/Ajayrama/Documents/Takahiro/countingResults/test1_8bit_median1_CLAHE3D64053/'
-    'test1_8bit_median1_CLAHE3D64053.tif',
-    'C:/Users/Ajayrama/Documents/Takahiro/countingResults/test1_8bit_CLAHE3D64053_median1/'
-    'test1_8bit_CLAHE3D64053_median1.tif'
+    os.path.join(homeFolder, 'metricsTest', 'verysmall_test.tif')
 ]
 
-labels = ['nothing', 'just CLAHE', 'median then CLAHE', 'CLAHE then median']
-opDir = 'C:/Users/Ajayrama/Documents/Takahiro/plotsEtc/test1'
+labels = ['test']
+opDir = 'C:/Users/Ajayrama/Documents/Takahiro/plotsEtc/metricsTest'
 
-saveResultsTestList(testLabelImageFiles, gtLabelImageFile, opDir, labels)
+saveResultsTestList(testLabelImageFiles, gtLabelImageFile, opDir, labels, saveDebugInfo=True)

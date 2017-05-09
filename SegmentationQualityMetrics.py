@@ -48,7 +48,7 @@ def getMetricsFromCounts(nFP: float, nTP: float, nFN: float) -> typing.List[floa
 
 
 def segQualErrors(testLabelImageFile: str,
-                  groundTruthLabeImageFile: str) -> tuple:
+                  groundTruthLabeImageFile: str, saveDebugInfoTo: typing.Union[None, str] = None) -> tuple:
 
     testLabelImage = sitk.ReadImage(testLabelImageFile)
     gtLabelImage = sitk.ReadImage(groundTruthLabeImageFile)
@@ -68,6 +68,7 @@ def segQualErrors(testLabelImageFile: str,
     testCentroidKDTree = cKDTree(testCentroids, leafsize=100)
     nnDists, nnInds = testCentroidKDTree.query(gtCentroids)
 
+    # mask for nnInds
     truePositiveMask = np.less_equal(nnDists, gtRadii)
     testTPInds = nnInds[truePositiveMask]
     testTPInds = list(set(testTPInds))
@@ -81,8 +82,10 @@ def segQualErrors(testLabelImageFile: str,
         gtCentroidKDTree = cKDTree(gtCentroids, leafsize=100)
         # looking for nearest neighbours for among gtCentroids for each testFP
         gtNNDists, gtNNInds = gtCentroidKDTree.query(testFPCentroids)
-        # looking those FPs whose centroids are not in any gt sphere
-        noiseFPIndsAmongTestFPs = [x for x, y in enumerate(gtNNDists) if y > gtRadii[x]]
+        # looking for those FPs whose centroids are not in any gt sphere
+        # In the sentence below, x in an index along testFPLabels, gtNNInds[x] is the index of the correspoding
+        # NN among gtLabels
+        noiseFPIndsAmongTestFPs = [x for x, y in enumerate(gtNNDists) if y > gtRadii[gtNNInds[x]]]
         noiseFPLabels = [testFPLabels[x] for x in noiseFPIndsAmongTestFPs]
 
         nonNoiseFPLabels = [x for x in testFPLabels if x not in noiseFPLabels]
@@ -90,6 +93,24 @@ def segQualErrors(testLabelImageFile: str,
     else:
         noiseFPLabels = []
         nonNoiseFPLabels = []
+
+    gtClassification = ["TP" if x else "FN" for x in truePositiveMask]
+    testClassification = []
+
+    for testLabel in testLabels:
+
+        if testLabel in testTPLabels:
+            testClassification.append("TP")
+        elif testLabel in noiseFPLabels:
+            testClassification.append("FP-Noise")
+        else:
+            testClassification.append("FP-NonNoise")
+
+    if saveDebugInfoTo:
+        writeDebugInfoTo(gtCentroids, gtLabels, gtRadii,
+                         gtClassification, os.path.join(saveDebugInfoTo, "gtData.xlsx"))
+        writeDebugInfoTo(testCentroids, testLabels, testRadii,
+                         testClassification, os.path.join(saveDebugInfoTo, "testData.xlsx"))
 
     nTP = len(testTPLabels)
 
@@ -108,19 +129,32 @@ def segQualErrors(testLabelImageFile: str,
 
     return nFP, nTP, nFN, nNoiseFP, nNonNoiseFP
 
+def writeDebugInfoTo(centroids, labels, radii, classification, outputFile):
+
+    df = pd.DataFrame(index=labels)
+    df["Centroids"] = list(map(str, map(lambda x: np.around(x, 2), centroids)))
+    df["Classification"] = classification
+    df["Radii"] = radii
+
+    df.to_excel(outputFile)
+
 
 def saveResultsTestList(testLabelImageFiles: typing.Iterable[str],
                         groundTruthLabelImagFile: str, outputDir: str,
-                        labels) -> pd.DataFrame:
+                        labels: typing.Iterable[str], saveDebugInfo: bool = False) -> pd.DataFrame:
     assert len(labels) == len(testLabelImageFiles), 'Number of elements in labels ' \
                                                         'and testLabelImageFiles are not equal'
 
     nTest = len(testLabelImageFiles)
     resDF = pd.DataFrame()
 
+    if saveDebugInfo:
+        saveDebugInfoTo = outputDir
+    else:
+        saveDebugInfoTo = None
     for label, testLabelImageFile in zip(labels, testLabelImageFiles):
         nFP, nTP, nFN, nNoiseFP, nNonNoiseFP= \
-            segQualErrors(testLabelImageFile, groundTruthLabelImagFile)
+            segQualErrors(testLabelImageFile, groundTruthLabelImagFile, saveDebugInfoTo=saveDebugInfoTo)
         recall, precision, fMeasure, accuracy = getMetricsFromCounts(nFP, nTP, nFN)
         testCellCount = nFP + nTP
         gtCellCount = nTP + nFN
@@ -150,6 +184,7 @@ def saveResultsTestList(testLabelImageFiles: typing.Iterable[str],
     ax1.plot(ax1.get_xlim(), [gtCellCount, gtCellCount], 'r:', lw=3, label='ground Truth')
     ax1.legend(loc='best')
     ax1.set_xlim(-0.5, nTest - 0.5)
+    ax1.set_xticklabels(ax0.get_xticklabels(), rotation=90)
     fig1.tight_layout()
     fig1.canvas.draw()
     fig1.savefig(os.path.join(outputDir, 'cellCounts.png'), dpi=150)
