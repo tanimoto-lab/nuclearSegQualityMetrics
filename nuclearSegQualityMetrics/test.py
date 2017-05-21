@@ -4,8 +4,9 @@
 # print(cellCounts)
 # plotCellCounts(opDir)
 
-from SegmentationQualityMetrics import saveResultsTestList
 import os
+
+from nuclearSegQualityMetrics.SegmentationQualityMetrics import saveResultsTestList
 
 homeFolder = 'C:/Users/Ajayrama/Documents/Takahiro'
 

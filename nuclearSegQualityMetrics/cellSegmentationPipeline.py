@@ -1,11 +1,13 @@
+import os
+import platform
 import sys
+
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QMainWindow, QDesktopWidget, QMessageBox, \
     QAction, QWidget, QVBoxLayout, QHBoxLayout
-from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import QCoreApplication
-from customWidgets import FileSelect
-import platform
-import os
+
+from nuclearSegQualityMetrics.customWidgets import FileSelect
+
 
 def raiseInfo(str, parent):
     QMessageBox.information(parent, 'Warning!', str)

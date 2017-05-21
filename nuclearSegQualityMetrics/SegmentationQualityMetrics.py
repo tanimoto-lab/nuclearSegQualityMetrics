@@ -1,14 +1,17 @@
-import numpy as np
-import SimpleITK as sitk
-from math import pi as PI
-from scipy.spatial import cKDTree
-import typing
-import sys
-import pandas as pd
-from matplotlib import pyplot as plt
 import os
-from matplotlibRCParams import mplPars
+import sys
+from math import pi as PI
+
+import SimpleITK as sitk
+import numpy as np
+import pandas as pd
 import seaborn as sns
+import typing
+from matplotlib import pyplot as plt
+from scipy.spatial import cKDTree
+
+from nuclearSegQualityMetrics.matplotlibRCParams import mplPars
+
 sns.set(rc=mplPars, style='darkgrid')
 
 

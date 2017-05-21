@@ -1,14 +1,16 @@
-import os
-import sys
-from customWidgets import FileSelect, DirSelect, raiseInfo
-from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, \
-    QMessageBox, QDesktopWidget, QTableWidget, QTextEdit,\
-    QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QCheckBox, QGroupBox, QLineEdit
-from PyQt5.QtGui import QIcon, QColor
-from PyQt5.QtCore import QProcess
-import platform
 import inspect
 import json
+import os
+import platform
+import sys
+
+from PyQt5.QtCore import QProcess
+from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, \
+    QMessageBox, QDesktopWidget, QTableWidget, QTextEdit, \
+    QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QCheckBox, QGroupBox, QLineEdit
+
+from nuclearSegQualityMetrics.customWidgets import FileSelect, DirSelect, raiseInfo
 
 
 def getShortenedPath(path, showLast=2, compressWith='.....'):

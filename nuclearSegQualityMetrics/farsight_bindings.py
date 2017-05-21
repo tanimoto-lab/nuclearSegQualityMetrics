@@ -1,12 +1,14 @@
 import os
-import subprocess
 import shutil
+import subprocess
 import sys
-from matplotlib import pyplot as plt
-from tifffile import imread
+
 import numpy as np
 import seaborn as sns
-from matplotlibRCParams import mplPars
+from matplotlib import pyplot as plt
+from tifffile import imread
+
+from nuclearSegQualityMetrics.matplotlibRCParams import mplPars
 
 sns.set(rc=mplPars, style='darkgrid')
 

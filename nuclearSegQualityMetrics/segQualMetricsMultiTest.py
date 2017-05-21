@@ -1,6 +1,7 @@
-from SegmentationQualityMetrics import saveResultsTestList
-import sys
 import json
+import sys
+
+from nuclearSegQualityMetrics.SegmentationQualityMetrics import saveResultsTestList
 
 assert len(sys.argv) == 2, 'Invalid Usage. Please use as: ' \
                            '\'python segQualMetricsMultiTest.py <json paramater file>\''
