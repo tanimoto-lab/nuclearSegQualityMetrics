@@ -10,10 +10,10 @@ setup(
                           "scipy>=0.18.1",
                           "pandas>=0.19.0",
                           "seaborn>=0.7.1",
-                          "SimpleITK>=0.10.0",
+                          "SimpleITK>=1.0.0",
                           "PyInstaller>=3.2.1",
                           "openpyxl>=2.4.1",
-                          "qt>=5.6.2",
+                          "PyQt5>=5.6.0",
                           "pillow>=3.4.2"],
-        python_requires="==3.5",
+        python_requires=">=3.6",
     )

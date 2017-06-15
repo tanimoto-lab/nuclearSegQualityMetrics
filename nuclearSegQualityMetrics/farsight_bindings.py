@@ -6,8 +6,7 @@ import sys
 import numpy as np
 import seaborn as sns
 from matplotlib import pyplot as plt
-from tifffile import imread
-
+from SimpleITK import LabelShapeStatisticsImageFilter, ReadImage
 from nuclearSegQualityMetrics.matplotlibRCParams import mplPars
 
 sns.set(rc=mplPars, style='darkgrid')
@@ -128,15 +127,15 @@ def readNucleiSegCountSingle(imgOutputDir):
 
     imgPrefix = os.path.split(imgOutputDir)[1]
 
-    labelImg = os.path.join(imgOutputDir, imgPrefix + '.tif')
+    labelImgFN = os.path.join(imgOutputDir, imgPrefix + '.tif')
 
-    assert os.path.isfile(labelImg), 'Label image {} not found'.format(labelImg)
+    assert os.path.isfile(labelImgFN), 'Label image {} not found'.format(labelImgFN)
+    labelImg = ReadImage(labelImgFN)
 
-    img = imread(labelImg)
+    lsif = LabelShapeStatisticsImageFilter()
+    lsif.Execute(labelImg)
 
-    cellCount = img.max() + 1
-
-    return cellCount
+    return lsif.GetNumberOfLabels()
 
 def readNucleiSegCountDir(outputDir):
 

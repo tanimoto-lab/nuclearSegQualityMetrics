@@ -1,2 +1,0 @@
-pyinstaller.exe segQualMetricsMultiTest.py
-pyinstaller --windowed --add-data dist\segQualMetricsMultiTest\;dist\segQualMetricsMultiTest segQualityMetricsQT.py
