@@ -109,11 +109,22 @@ def segQualErrors(testLabelImageFile: str,
         else:
             testClassification.append("FP-NonNoise")
 
+    testLabelImageStub = os.path.split(testLabelImageFile)[1].split(".")[0]
+    gTLabelImageFileStub = os.path.split(groundTruthLabeImageFile)[1].split(".")[0]
+
+    outdirStub = "{}_{}".format(testLabelImageStub, gTLabelImageFileStub)
+    localOutputDir = os.path.join(saveDebugInfoTo, outdirStub)
+
+    if not os.path.isdir(localOutputDir):
+        os.mkdir(localOutputDir)
+
     if saveDebugInfoTo:
         writeDebugInfoTo(gtCentroids, gtLabels, gtRadii,
-                         gtClassification, os.path.join(saveDebugInfoTo, "gtData.xlsx"))
+                         gtClassification,
+                         os.path.join(localOutputDir, "gtData.xlsx"))
         writeDebugInfoTo(testCentroids, testLabels, testRadii,
-                         testClassification, os.path.join(saveDebugInfoTo, "testData.xlsx"))
+                         testClassification,
+                         os.path.join(localOutputDir, "testData.xlsx"))
 
     nTP = len(testTPLabels)
 

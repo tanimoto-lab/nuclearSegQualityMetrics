@@ -51,7 +51,8 @@ class SegQualityMetricsThread(QThread):
         saveResultsTestList(testLabelImageFiles=self.testLabelImageFiles,
                             groundTruthLabelImagFile=self.gtLabelImageFile,
                             outputDir=self.outputDir,
-                            labels=self.testLabels)
+                            labels=self.testLabels,
+                            saveDebugInfo=True)
 
 
 class CentralWidget(QWidget):
