@@ -1,17 +1,16 @@
 import inspect
-import json
 import os
 import platform
 import sys
 
-from PyQt5.QtCore import QProcess
+from PyQt5.QtCore import QThread, pyqtSignal, QObject
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, \
     QMessageBox, QDesktopWidget, QTableWidget, QTextEdit, \
     QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QCheckBox, QGroupBox, QLineEdit
 
 from nuclearSegQualityMetrics.customWidgets import FileSelect, DirSelect, raiseInfo
-
+from nuclearSegQualityMetrics.SegmentationQualityMetrics import saveResultsTestList
 
 def getShortenedPath(path, showLast=2, compressWith='.....'):
 
@@ -36,27 +35,48 @@ def getAllFilesInTree(dir, filter=None):
         files += [os.path.join(dirFull, file) for file in fileList]
     return files
 
+class SegQualityMetricsThread(QThread):
+
+    def __init__(self, testLabelImageFiles: list,
+                 gtLabelImageFile: str, testLabels: list, outputDir: str):
+        self.testLabelImageFiles = testLabelImageFiles
+        self.gtLabelImageFile = gtLabelImageFile
+        self.testLabels = testLabels
+        self.outputDir = outputDir
+        self.terminated = False
+
+        super().__init__()
+
+    def run(self):
+        saveResultsTestList(testLabelImageFiles=self.testLabelImageFiles,
+                            groundTruthLabelImagFile=self.gtLabelImageFile,
+                            outputDir=self.outputDir,
+                            labels=self.testLabels)
+
+
 class CentralWidget(QWidget):
+    startCalcSig = pyqtSignal(list, str, list, str)
 
     def __init__(self, parent):
         super().__init__(parent)
-
         self.initui()
-        self.initSegQualPy()
+        self.calcThread = SegQualityMetricsThread(None, None, None, None)
+
 
     def initui(self):
+
+        mainVBox = QVBoxLayout()
+
         self.gtLabelImageSelect = FileSelect(title='Ground Truth Label Image',
-                                        parent=self,
                                         dialogDefaultPath=None,
                                         dialogFileTypeFilter='Label Image(*.tif)',
                                         dialogTitle='Choose Ground Truth Label Image'
                                         )
         self.testFolder = DirSelect(title='Folder containing test images',
-                               parent=self,
                                dialogTitle='Choose folder containing test images',
                                dialogDefaultPath=None)
 
-        mainVBox = QVBoxLayout()
+
         mainVBox.addWidget(self.gtLabelImageSelect)
         mainVBox.addWidget(self.testFolder)
 
@@ -70,7 +90,7 @@ class CentralWidget(QWidget):
 
         tableActionButtons.addWidget(refreshButton)
 
-        self.tiffTable = QTableWidget(self)
+        self.tiffTable = QTableWidget()
         self.loadTable()
         mainVBox.addWidget(self.tiffTable)
 
@@ -81,9 +101,9 @@ class CentralWidget(QWidget):
         mainVBox.addWidget(self.opDirSelect)
 
         runGroupBox = QGroupBox(self)
-        runBox = QHBoxLayout(self)
+        runBox = QHBoxLayout()
 
-        runControlBox = QVBoxLayout(self)
+        runControlBox = QVBoxLayout()
         startButton = QPushButton('Run')
         startButton.clicked.connect(self.runSegQualMetrics)
 
@@ -121,17 +141,6 @@ class CentralWidget(QWidget):
                 checkedTiffFileLabels.append(label)
         return checkedTiffFiles, checkedTiffFileLabels
 
-    def writeJSONParams(self, gtLabelImage, testImages, testFileLabels, outDir):
-
-        pars = {}
-        pars['gtLabelImageFile'] = gtLabelImage
-        pars['testLabelImageFiles'] = testImages
-        pars['testImageFileLabels'] = testFileLabels
-        pars['outputDir'] = outDir
-        jsonFile = os.path.join(self.parent().appDataHome, 'temp.json')
-        json.dump(pars, open(jsonFile, 'w'))
-        return jsonFile
-
     def runSegQualMetrics(self):
 
         checkedTiffFiles, checkedTiffFileLabels = self.getcheckedTiffList()
@@ -144,33 +153,30 @@ class CentralWidget(QWidget):
                                      QMessageBox.Yes | QMessageBox.Cancel, QMessageBox.Cancel)
 
         if reply == QMessageBox.Yes:
-            jsonFile = self.writeJSONParams(gtLabelImage, checkedTiffFiles, checkedTiffFileLabels, outputDir)
-            proc = QProcess(self)
-            self.interruptButton.clicked.connect(proc.kill)
+
+            self.calcThread.__init__(checkedTiffFiles,
+                                   gtLabelImage,
+                                   checkedTiffFileLabels,
+                                   outputDir)
+            self.calcThread.start()
             self.outputDisplay.append('Calculating metrics for:\n{}\nPlease Wait. The program may take '
-                                      'a few minutes to finish......'.format(currentData))
-            proc.start(self.segQualPy, [jsonFile])
-            proc.finished.connect(self.checkoutput)
-            proc.errorOccurred.connect(self.printTerminated)
+                                     'a few minutes to finish......'.format(currentData))
+            self.interruptButton.clicked.connect(self.termicateCalc)
+            self.calcThread.finished.connect(self.handleSQMFinished)
 
-    def printTerminated(self):
+    def termicateCalc(self):
+        self.calcThread.terminated = True
+        self.calcThread.terminate()
 
-        self.sender().terminate()
-        self.outputDisplay.append('Calculation Terminated. No Output generated.')
 
-    def checkoutput(self, exitCode, exitStatus):
+    def handleSQMFinished(self):
 
-        sender = self.sender()
-        print(exitCode)
-        print(exitStatus)
-        if exitStatus == QProcess.NormalExit:
-            if exitCode != 0:
-                raiseInfo('Error:\n{}'.format(sender.readAllStandardError()), self)
-            else:
-                self.outputDisplay.append('Finished Succesfully. '
-                                          'Metrics written into {}'.format(self.opDirSelect.getText()))
+        if self.calcThread.terminated:
+            self.outputDisplay.append('Calculation Terminated. No Output generated.')
         else:
-            raiseInfo('Error:\n{}'.format(sender.readAllStandardError()), self)
+            self.outputDisplay.append('Finished Succesfully. '
+                                          'Metrics written into {}'.format(self.opDirSelect.getText()))
+
     def loadTiffs(self):
 
         testFolder = self.testFolder.getText()
@@ -230,7 +236,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(centralWidget)
 
 
-        self.setWindowTitle('Tanimoto Lab Nuclei Segmentation Pipeline')
+        self.setWindowTitle('Segmentation Quality Metrics')
         self.setGeometry(300, 300, 500, 700)
         self.center()
         # self.setWindowIcon(QIcon('web.png'))
