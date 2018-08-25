@@ -2,7 +2,8 @@ import os
 import sys
 from math import pi as PI
 
-import SimpleITK as sitk
+import tifffile
+from skimage import measure
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -24,17 +25,17 @@ def getSphereRadius(volume: float) -> float:
     return temp ** (1/3.0)
 
 
-def labelCentroidRadius(labelImage: sitk.Image) -> tuple:
+def labelCentroidRadius(labelImage: np.ndarray) -> tuple:
 
-    labelStats = sitk.LabelShapeStatisticsImageFilter()
-    labelStats.Execute(labelImage)
+    regionProps = measure.regionprops(labelImage)
 
-    labels = labelStats.GetLabels()
+    labels = [x.label for x in regionProps]
 
-    centroids = [labelStats.GetCentroid(x) for x in labels]
-    radii = [labelStats.GetEquivalentSphericalRadius(x) for x in labels]
+    centroids = [x.centroid for x in regionProps]
+    volumes = [x.filled_area for x in regionProps]
+    radii = [getSphereRadius(x) for x in volumes]
 
-    return labels, centroids, radii
+    return labels, centroids, radii, volumes
 
 
 def getMetricsFromCounts(nFP: float, nTP: float, nFN: float) -> typing.List[float]:
@@ -53,11 +54,15 @@ def getMetricsFromCounts(nFP: float, nTP: float, nFN: float) -> typing.List[floa
 def segQualErrors(testLabelImageFile: str,
                   groundTruthLabeImageFile: str, saveDebugInfoTo: typing.Union[None, str] = None) -> tuple:
 
-    testLabelImage = sitk.ReadImage(testLabelImageFile)
-    gtLabelImage = sitk.ReadImage(groundTruthLabeImageFile)
+    testLabelImage = tifffile.imread(testLabelImageFile)
+    assert testLabelImage.dtype == np.uint16, "The test image, {}, is not of type 16bit grayscale. " \
+                                                          "Farsight output label image is usually 16bit " \
+                                              "grayscale, please check!".format(testLabelImageFile)
 
-    testShape = testLabelImage.GetSize()
-    gtShape = gtLabelImage.GetSize()
+    gtLabelImage = tifffile.imread(groundTruthLabeImageFile)
+
+    testShape = testLabelImage.shape
+    gtShape = gtLabelImage.shape
 
     assert len(testShape) == 3, 'testLabelImage is not 3D'
     assert len(gtShape) == 3, 'groundTruthLabelImage is not 3D'
@@ -65,8 +70,8 @@ def segQualErrors(testLabelImageFile: str,
     assert testShape == gtShape, 'testLabelImage {} and groundTruthLabelImage {} ' \
                                  'do not have the same shape'.format(testLabelImageFile, groundTruthLabeImageFile)
 
-    testLabels, testCentroids, testRadii = labelCentroidRadius(testLabelImage)
-    gtLabels, gtCentroids, gtRadii = labelCentroidRadius(gtLabelImage)
+    testLabels, testCentroids, testRadii, testVolumes = labelCentroidRadius(testLabelImage)
+    gtLabels, gtCentroids, gtRadii, gtVolumes = labelCentroidRadius(gtLabelImage)
 
     testCentroidKDTree = cKDTree(testCentroids, leafsize=100)
     nnDists, nnInds = testCentroidKDTree.query(gtCentroids)
@@ -119,10 +124,10 @@ def segQualErrors(testLabelImageFile: str,
         os.mkdir(localOutputDir)
 
     if saveDebugInfoTo:
-        writeDebugInfoTo(gtCentroids, gtLabels, gtRadii,
+        writeDebugInfoTo(gtCentroids, gtLabels, gtRadii, gtVolumes,
                          gtClassification,
                          os.path.join(localOutputDir, "gtData.xlsx"))
-        writeDebugInfoTo(testCentroids, testLabels, testRadii,
+        writeDebugInfoTo(testCentroids, testLabels, testRadii, testVolumes,
                          testClassification,
                          os.path.join(localOutputDir, "testData.xlsx"))
 
@@ -143,13 +148,13 @@ def segQualErrors(testLabelImageFile: str,
 
     return nFP, nTP, nFN, nNoiseFP, nNonNoiseFP
 
-def writeDebugInfoTo(centroids, labels, radii, classification, outputFile):
+def writeDebugInfoTo(centroids, labels, radii, volumes, classification, outputFile):
 
-    df = pd.DataFrame(index=labels)
+    df = pd.DataFrame(index=pd.Index(data=labels, name="Label Value"))
     df["Centroids"] = list(map(str, map(lambda x: np.around(x, 2), centroids)))
     df["Classification"] = classification
-    df["Radii"] = radii
-
+    df["Equivalent Sperical Radius (pixels)"] = radii
+    df["Volume (pixels)"] = volumes
     df.to_excel(outputFile)
 
 

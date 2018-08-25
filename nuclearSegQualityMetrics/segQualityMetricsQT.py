@@ -49,10 +49,12 @@ class SegQualityMetricsThread(QThread):
 
     def run(self):
         saveResultsTestList(testLabelImageFiles=self.testLabelImageFiles,
-                            groundTruthLabelImagFile=self.gtLabelImageFile,
-                            outputDir=self.outputDir,
-                            labels=self.testLabels,
-                            saveDebugInfo=True)
+                                groundTruthLabelImagFile=self.gtLabelImageFile,
+                                outputDir=self.outputDir,
+                                labels=self.testLabels,
+                                saveDebugInfo=True)
+
+
 
 
 class CentralWidget(QWidget):
@@ -159,9 +161,14 @@ class CentralWidget(QWidget):
                                    gtLabelImage,
                                    checkedTiffFileLabels,
                                    outputDir)
-            self.calcThread.start()
-            self.outputDisplay.append('Calculating metrics for:\n{}\nPlease Wait. The program may take '
-                                     'a few minutes to finish......'.format(currentData))
+            try:
+                self.calcThread.start()
+                self.outputDisplay.append('Calculating metrics for:\n{}\nPlease Wait. The program may take '
+                                          'a few minutes to finish......'.format(currentData))
+            except Exception as e:
+                self.outputDisplay.append('The Program has encoutered an error. Here is the error message:\n'
+                                          '{}'.format(str(e)))
+                self.calcThread.terminated
             self.interruptButton.clicked.connect(self.termicateCalc)
             self.calcThread.finished.connect(self.handleSQMFinished)
 
