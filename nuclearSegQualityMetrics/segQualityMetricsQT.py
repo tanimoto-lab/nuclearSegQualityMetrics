@@ -175,6 +175,7 @@ class CentralWidget(QWidget):
     def termicateCalc(self):
         self.calcThread.terminated = True
         self.calcThread.terminate()
+        self.calcThread.wait()
 
 
     def handleSQMFinished(self):
@@ -275,12 +276,20 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
 
-        # TODO check if any processes are running. Include this in message
+        centralWidget = self.centralWidget()
+        threadRunning = centralWidget.calcThread.isRunning()
+        if threadRunning:
+            msg = "The program is running a job. Close it and quit?"
+        else:
+            msg = "Are you sure to quit?"
         reply = QMessageBox.question(self, 'Message',
-                                     "Are you sure to quit?", QMessageBox.Yes |
+                                     msg, QMessageBox.Yes |
                                      QMessageBox.No, QMessageBox.No)
 
         if reply == QMessageBox.Yes:
+            if threadRunning:
+                centralWidget.calcThread.terminate()
+                centralWidget.wait()
             event.accept()
         else:
             event.ignore()
