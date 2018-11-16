@@ -10,4 +10,4 @@ gtLabelImageFile = pars['gtLabelImageFile']
 testLabelImageFiles = pars['testLabelImageFiles']
 testLabels = pars['testImageFileLabels']
 outputDir = pars['outputDir']
-saveResultsTestList(testLabelImageFiles, gtLabelImageFile, outputDir, testLabels)
+saveResultsTestList(testLabelImageFiles, gtLabelImageFile, outputDir, testLabels, True)

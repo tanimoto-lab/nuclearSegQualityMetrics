@@ -4,7 +4,7 @@ Here are the steps:
 
 1. Create a new environment with conda environment
 
-`conda create -n cellCounting python=3.5 numpy pandas matplotlib scipy pillow seaborn pyqt=5`
+`conda create -n cellCounting python=3.5`
 
 2. Activate the environment
 

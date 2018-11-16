@@ -49,10 +49,12 @@ class SegQualityMetricsThread(QThread):
 
     def run(self):
         saveResultsTestList(testLabelImageFiles=self.testLabelImageFiles,
-                            groundTruthLabelImagFile=self.gtLabelImageFile,
-                            outputDir=self.outputDir,
-                            labels=self.testLabels,
-                            saveDebugInfo=True)
+                                groundTruthLabelImagFile=self.gtLabelImageFile,
+                                outputDir=self.outputDir,
+                                labels=self.testLabels,
+                                saveDebugInfo=True)
+
+
 
 
 class CentralWidget(QWidget):
@@ -159,15 +161,21 @@ class CentralWidget(QWidget):
                                    gtLabelImage,
                                    checkedTiffFileLabels,
                                    outputDir)
-            self.calcThread.start()
-            self.outputDisplay.append('Calculating metrics for:\n{}\nPlease Wait. The program may take '
-                                     'a few minutes to finish......'.format(currentData))
+            try:
+                self.calcThread.start()
+                self.outputDisplay.append('Calculating metrics for:\n{}\nPlease Wait. The program may take '
+                                          'a few minutes to finish......'.format(currentData))
+            except Exception as e:
+                self.outputDisplay.append('The Program has encoutered an error. Here is the error message:\n'
+                                          '{}'.format(str(e)))
+                self.calcThread.terminated
             self.interruptButton.clicked.connect(self.termicateCalc)
             self.calcThread.finished.connect(self.handleSQMFinished)
 
     def termicateCalc(self):
         self.calcThread.terminated = True
         self.calcThread.terminate()
+        self.calcThread.wait()
 
 
     def handleSQMFinished(self):
@@ -268,12 +276,20 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
 
-        # TODO check if any processes are running. Include this in message
+        centralWidget = self.centralWidget()
+        threadRunning = centralWidget.calcThread.isRunning()
+        if threadRunning:
+            msg = "The program is running a job. Close it and quit?"
+        else:
+            msg = "Are you sure to quit?"
         reply = QMessageBox.question(self, 'Message',
-                                     "Are you sure to quit?", QMessageBox.Yes |
+                                     msg, QMessageBox.Yes |
                                      QMessageBox.No, QMessageBox.No)
 
         if reply == QMessageBox.Yes:
+            if threadRunning:
+                centralWidget.calcThread.terminate()
+                centralWidget.wait()
             event.accept()
         else:
             event.ignore()
