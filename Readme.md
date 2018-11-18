@@ -24,7 +24,7 @@ Note: The path of the folder extra-dll above needs to be changed depending the a
  
 
 IMPORTANT:
-There could be trouble with compilation when pacakges are installed using conda. The last successful
+There could be trouble with compilation when packages are installed using conda. The last successful
 build was with packages installed from pip.
 
 Usage

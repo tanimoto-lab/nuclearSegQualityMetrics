@@ -20,4 +20,4 @@ Here are the steps:
 
 5. Install the package
 
-`pip install nuclearSegQualityMetrics`
+`pip install ./`
